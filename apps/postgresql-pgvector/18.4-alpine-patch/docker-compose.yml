@@ -1,22 +1,25 @@
 services:
-  postgresql-pgvector:
+  postgres:
     container_name: ${CONTAINER_NAME}
     image: ghcr.io/restart-game-lab/postgresql-patch:18.4-alpine-patch
     restart: always
-    network: 1panel-network
-    ports:
-      - ${PANEL_DB_PORT}:5432
     environment:
-      POSTGRES_USER: ${PANEL_DB_ROOT_USER}
-      POSTGRES_PASSWORD: ${PANEL_DB_ROOT_PASSWORD}
-      POSTGRES_DB: ${PANEL_DB_NAME:-postgres}
+      - POSTGRES_USER=${PANEL_DB_ROOT_USER}
+      - POSTGRES_PASSWORD=${PANEL_DB_ROOT_PASSWORD}
+    ports:
+      - ${PANEL_APP_PORT_HTTP}:5432
     volumes:
-      - ./data:/var/lib/postgresql/data
-      - ./init-extensions.sh:/docker-entrypoint-initdb.d/init-extensions.sh
+      - ./data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${PANEL_DB_ROOT_USER}"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-p", "5432", "-q", "-U", "${PANEL_DB_ROOT_USER}"]
+      start_period: 20s
+      interval: 30s
       retries: 5
+      timeout: 5s
+    networks:
+      - 1panel-network
     labels:
       createdBy: "Apps"
+networks:
+  1panel-network:
+    external: true

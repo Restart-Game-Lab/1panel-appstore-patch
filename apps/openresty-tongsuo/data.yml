@@ -1,32 +1,25 @@
-additionalProperties:
-    formFields:
-        - default: 80
-          envKey: PANEL_APP_PORT_HTTP
-          labelEn: HTTP Port
-          labelZh: HTTP 端口
-          required: true
-          rule: paramPort
-          type: number
-        - default: 443
-          envKey: PANEL_APP_PORT_HTTPS
-          labelEn: HTTPS Port
-          labelZh: HTTPS 端口
-          required: true
-          rule: paramPort
-          type: number
-        - default: ./www
-          envKey: WEBSITE_DIR
-          labelEn: Website Dir
-          labelZh: 网站目录
-          required: true
-          type: text
-key: openresty-tongsuo
 name: OpenResty Tongsuo
 tags:
-    - Server
-type: runtime
-limit: 1
-crossVersionUpdate: false
-description:
-    en: OpenResty with Tongsuo (BabaSSL) for SM2/SM3/SM4/TLCP Chinese national cryptography support.
-    zh: 集成铜锁 (Tongsuo/BabaSSL) 的 OpenResty，支持 SM2/SM3/SM4/TLCP 国密算法。
+    - Web 服务器
+title: 集成国密铜锁的 OpenResty
+description: 集成国密铜锁的 OpenResty
+additionalProperties:
+    key: openresty-tongsuo
+    name: OpenResty Tongsuo
+    tags:
+        - Server
+    shortDescZh: 集成国密铜锁 (Tongsuo) 的 OpenResty
+    shortDescEn: OpenResty with Tongsuo (BabaSSL) for SM2/SM3/SM4/TLCP Chinese national cryptography
+    description:
+        en: OpenResty with Tongsuo (BabaSSL) for SM2/SM3/SM4/TLCP Chinese national cryptography support.
+        zh: 集成铜锁 (Tongsuo/BabaSSL) 的 OpenResty，支持 SM2/SM3/SM4/TLCP 国密算法。
+    type: runtime
+    crossVersionUpdate: false
+    limit: 1
+    recommend: 2
+    website: https://openresty.org
+    github: https://github.com/Restart-Game-Lab/openresty-tongsuo
+    document: http://openresty.org/cn/getting-started.html
+    architectures:
+      - amd64
+      - arm64

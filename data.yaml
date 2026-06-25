@@ -1,21 +1,13 @@
-tags:
+name: 1Panel Appstore Patch
+title: 1Panel 第三方补丁应用商店
+additionalProperties:
+  tags:
     - key: Database
-      name:
-          en: Database
-          ja: データベース
-          zh-Hant: 資料庫
-          ms: Pangkalan Data
-          pt-BR: Banco de dados
-          ko: 데이터베이스
-          ru: Базы данных
-          zh: 数据库
+      name: 数据库
+      sort: 20
+      locales: { en: "Database", ja: "データベース", ms: "Pangkalan Data", pt-br: "Banco de Dados", ru: "База данных", ko: "데이터베이스", zh-hant: "資料庫", zh: "数据库", tr: "Veritabanı", es-es: "Base de datos" }
     - key: Server
-      name:
-          en: Server
-          ja: サーバー
-          zh-Hant: 伺服器
-          ms: Pelayan
-          pt-BR: Servidor
-          ko: 서버
-          ru: Сервер
-          zh: 服务器
+      name: Web 服务器
+      sort: 30
+      locales: { en: "Web Server", ja: "ウェブサーバー", ms: "Pelayan Web", pt-br: "Servidor Web", ru: "Веб-сервер", ko: "서버", zh-hant: "網頁伺服器", zh: "Web 服务器", tr: "Web Sunucusu", es-es: "Servidor web" }
+  version: v1.0.0

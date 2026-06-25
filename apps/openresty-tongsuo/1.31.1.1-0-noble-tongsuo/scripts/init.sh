@@ -1,11 +1,8 @@
 #!/bin/bash
 
-if [ -f ./conf/nginx.conf ]; then
-    exit 0
-fi
+source ./.env
 
-mkdir -p ./conf ./log ./www
+sed -i -E "s/(listen[[:space:]]+)80([[:space:]]*default_server;)/\1${PANEL_APP_PORT_HTTP}\2/" conf/default/00.default.conf
+sed -i -E "s/(listen[[:space:]]+)\[::]:80([[:space:]]*default_server;)/\1\[::]:${PANEL_APP_PORT_HTTP}\2/" conf/default/00.default.conf
 
-docker run --rm -v ./conf:/conf ghcr.io/restart-game-lab/openresty-tongsuo:1.31.1.1-0-noble-tongsuo sh -c \
-    "cp /usr/local/openresty/nginx/conf/nginx.conf /conf/nginx.conf && \
-     cp /usr/local/openresty/nginx/conf/nginx.vh.default.conf /conf/nginx.vh.default.conf"
+sed -i -E "s/(listen[[:space:]]+)(80)([[:space:]]*;)/\1${PANEL_APP_PORT_HTTP}\3/" conf/default/default.conf
