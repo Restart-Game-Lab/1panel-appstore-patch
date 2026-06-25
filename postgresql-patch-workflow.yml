@@ -1,0 +1,261 @@
+name: "\U0001F433 Build & Push PostgreSQL Patch"
+
+on:
+  push:
+    branches: [main, master]
+    paths: ["build/**", ".github/workflows/docker-build.yml"]
+  pull_request:
+    branches: [main, master]
+    paths: ["build/**", ".github/workflows/docker-build.yml"]
+  workflow_dispatch:
+    inputs:
+      pg_version:
+        description: "PostgreSQL 版本 (完整 Docker 标签如 18.4 或 17.10，或主版本号如 18)"
+        default: ""
+        required: false
+      pgvector_version:
+        description: "pgvector version (leave empty for per-version default)"
+        default: ""
+      push_to_registry:
+        description: "Push to ghcr.io?"
+        type: boolean
+        default: true
+  schedule:
+    - cron: "0 6 * * 1"
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # ============================================================
+  # Job 1: 准备元数据（生成构建矩阵）
+  # ============================================================
+  prepare:
+    name: "prepare / metadata"
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      image: ${{ steps.image-name.outputs.image }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - id: image-name
+        run: echo "image=${{ env.REGISTRY }}/${{ github.repository }}" >> $GITHUB_OUTPUT
+
+      - id: set-matrix
+        run: |
+          # workflow_dispatch 手动指定单个版本
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.pg_version }}" ]; then
+            PGV="${{ github.event.inputs.pg_version }}"
+            PVV="${{ github.event.inputs.pgvector_version }}"
+            # 只指定了主版本号时，自动映射到当前 minor 版本
+            case "$PGV" in
+              18) DOCKER_TAG="18.4"; IMAGE_TAG="18.4"; PVV="${PVV:-0.8.2}" ;;
+              17) DOCKER_TAG="17.10"; IMAGE_TAG="17.10"; PVV="${PVV:-0.8.2}" ;;
+              16) DOCKER_TAG="16.14"; IMAGE_TAG="16.14"; PVV="${PVV:-0.8.2}" ;;
+              15) DOCKER_TAG="15.18"; IMAGE_TAG="15.18"; PVV="${PVV:-0.8.2}" ;;
+              14) DOCKER_TAG="14.23"; IMAGE_TAG="14.23"; PVV="${PVV:-0.8.2}" ;;
+              13) DOCKER_TAG="13.23"; IMAGE_TAG="13.23"; PVV="${PVV:-0.8.2}" ;;
+              12) DOCKER_TAG="12.22"; IMAGE_TAG="12.22"; PVV="${PVV:-0.7.4}" ;;
+              *)  DOCKER_TAG="$PGV"; IMAGE_TAG="$PGV"; PVV="${PVV:-0.8.2}" ;;
+            esac
+            MATRIX="{\"include\":[{\"pg_docker\":\"${DOCKER_TAG}\",\"pg_image_tag\":\"${IMAGE_TAG}\",\"pgvector_version\":\"${PVV}\"}]}"
+          else
+            # 默认构建所有支持的版本
+            # PG 12 使用 pgvector 0.7.4（0.8.2 不支持 PG 12）
+            MATRIX="{\"include\":[{\"pg_docker\":\"18.4\",\"pg_image_tag\":\"18.4\",\"pgvector_version\":\"0.8.2\"},{\"pg_docker\":\"17.10\",\"pg_image_tag\":\"17.10\",\"pgvector_version\":\"0.8.2\"},{\"pg_docker\":\"16.14\",\"pg_image_tag\":\"16.14\",\"pgvector_version\":\"0.8.2\"},{\"pg_docker\":\"15.18\",\"pg_image_tag\":\"15.18\",\"pgvector_version\":\"0.8.2\"},{\"pg_docker\":\"14.23\",\"pg_image_tag\":\"14.23\",\"pgvector_version\":\"0.8.2\"},{\"pg_docker\":\"13.23\",\"pg_image_tag\":\"13.23\",\"pgvector_version\":\"0.8.2\"},{\"pg_docker\":\"12.22\",\"pg_image_tag\":\"12.22\",\"pgvector_version\":\"0.7.4\"}]}"
+          fi
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "Matrix: $MATRIX"
+
+      - name: "build plan"
+        run: |
+          echo "========================================="
+          echo "  Image      : ${{ steps.image-name.outputs.image }}"
+          echo "  Matrix     : ${{ steps.set-matrix.outputs.matrix }}"
+          echo "  Event      : ${{ github.event_name }}"
+          echo "========================================="
+
+  # ============================================================
+  # Job 2: 编译镜像 (不推送)
+  # ============================================================
+  build:
+    name: "build / pg${{ matrix.pg_image_tag }}"
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ matrix.pg_image_tag }}-alpine-patch
+          labels: |
+            org.opencontainers.image.title=PostgreSQL Patch
+            org.opencontainers.image.description=PostgreSQL ${{ matrix.pg_image_tag }} + pre-compiled extensions
+            org.opencontainers.image.vendor=PostgreSQL Patch Community
+            org.opencontainers.image.version=${{ matrix.pg_image_tag }}-alpine-patch
+            pg.version=${{ matrix.pg_image_tag }}
+            extensions.included=pgvector,pg_repack,pg_hint_plan,pg_cron,postgis
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: ./build
+          file: ./build/Dockerfile
+          push: false
+          load: ${{ github.event_name == 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            PG_VERSION=${{ matrix.pg_docker }}
+            PGVECTOR_VERSION=${{ matrix.pgvector_version }}
+          cache-from: type=gha,scope=pg${{ matrix.pg_image_tag }}
+          cache-to: type=gha,mode=max,scope=pg${{ matrix.pg_image_tag }}
+
+  # ============================================================
+  # Job 3: 推送镜像到 ghcr.io
+  # ============================================================
+  push:
+    name: "push / pg${{ matrix.pg_image_tag }}"
+    needs: [prepare, build]
+    if: |
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.push_to_registry != 'false')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ matrix.pg_image_tag }}-alpine-patch
+            type=raw,value=latest,enable=${{ matrix.pg_image_tag == '18.4' }}
+          labels: |
+            org.opencontainers.image.title=PostgreSQL Patch
+            org.opencontainers.image.description=PostgreSQL ${{ matrix.pg_image_tag }} + pre-compiled extensions
+            org.opencontainers.image.vendor=PostgreSQL Patch Community
+            org.opencontainers.image.version=${{ matrix.pg_image_tag }}-alpine-patch
+            pg.version=${{ matrix.pg_image_tag }}
+            extensions.included=pgvector,pg_repack,pg_hint_plan,pg_cron,postgis
+
+      - id: login
+        run: |
+          for i in 1 2 3 4 5; do
+            echo "ghcr.io login attempt $i/5..."
+            if echo "${{ secrets.GITHUB_TOKEN }}" | docker login "${{ env.REGISTRY }}" -u "${{ github.actor }}" --password-stdin 2>&1; then
+              echo "ghcr.io login OK (attempt $i)"
+              exit 0
+            fi
+            [ $i -lt 5 ] && sleep $((5 * i))
+          done
+          echo "ghcr.io login FAILED after 5 attempts"
+          exit 1
+
+      - id: push-step
+        uses: docker/build-push-action@v7
+        with:
+          context: ./build
+          file: ./build/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            PG_VERSION=${{ matrix.pg_docker }}
+            PGVECTOR_VERSION=${{ matrix.pgvector_version }}
+          cache-from: type=gha,scope=pg${{ matrix.pg_image_tag }}
+          cache-to: type=gha,mode=max,scope=pg${{ matrix.pg_image_tag }}
+
+  # ============================================================
+  # Job 4: 拉取验证
+  # ============================================================
+  verify:
+    name: "verify / pg${{ matrix.pg_image_tag }}"
+    needs: [prepare, push]
+    if: |
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.push_to_registry != 'false')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - run: |
+          for i in 1 2 3 4 5; do
+            echo "ghcr.io login attempt $i/5..."
+            if echo "${{ secrets.GITHUB_TOKEN }}" | docker login "${{ env.REGISTRY }}" -u "${{ github.actor }}" --password-stdin 2>&1; then
+              echo "ghcr.io login OK (attempt $i)"
+              exit 0
+            fi
+            [ $i -lt 5 ] && sleep $((5 * i))
+          done
+          echo "ghcr.io login FAILED after 5 attempts"
+          exit 1
+
+      - name: "pull image"
+        run: |
+          docker pull "${{ needs.prepare.outputs.image }}:${{ matrix.pg_image_tag }}-alpine-patch"
+
+      - name: "verify / pgvector extension"
+        run: |
+          CONTAINER="pgvec-test-pg${{ matrix.pg_image_tag }}"
+          IMAGE="${{ needs.prepare.outputs.image }}:${{ matrix.pg_image_tag }}-alpine-patch"
+          docker run -e POSTGRES_PASSWORD=test \
+            -d --name "$CONTAINER" "$IMAGE"
+          echo "Waiting for PostgreSQL to fully initialize..."
+          for i in $(seq 1 60); do
+            if docker logs "$CONTAINER" 2>&1 | grep -q "database system is ready to accept connections"; then
+              echo "PostgreSQL fully initialized after ${i}s"
+              break
+            fi
+            if ! docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null | grep -q true; then
+              echo "::error::Container exited prematurely!"
+              docker logs "$CONTAINER" 2>&1 | tail -30
+              exit 1
+            fi
+            sleep 1
+          done
+          sleep 2
+          if ! docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null | grep -q true; then
+            echo "::error::Container exited after init!"
+            docker logs "$CONTAINER" 2>&1 | tail -30
+            exit 1
+          fi
+          echo "--- pgvector extension ---"
+          docker exec "$CONTAINER" psql -U postgres -c \
+            "CREATE EXTENSION IF NOT EXISTS vector; SELECT extname, extversion FROM pg_extension WHERE extname = 'vector';"
+          echo "--- vector type test ---"
+          docker exec "$CONTAINER" psql -U postgres -c \
+            "SELECT '[1,2,3]'::vector;"
+          echo "--- cleanup ---"
+          docker stop "$CONTAINER" || true
+          docker rm "$CONTAINER" || true
+
+      - name: "verify / postgresql"
+        run: |
+          docker run --rm "${{ needs.prepare.outputs.image }}:${{ matrix.pg_image_tag }}-alpine-patch" \
+            postgres --version
+
+      - name: "summary"
+        run: |
+          echo "========================================="
+          echo "  PG ${{ matrix.pg_image_tag }} + pgvector ${{ matrix.pgvector_version }}"
+          echo "  Image: ${{ needs.prepare.outputs.image }}:${{ matrix.pg_image_tag }}-alpine-patch"
+          echo "  Verified OK"
+          echo "========================================="

@@ -1,7 +1,7 @@
 services:
   postgres:
     container_name: ${CONTAINER_NAME}
-    image: postgres:12.22-alpine
+    image: ghcr.io/restart-game-lab/postgresql-patch:12.22-alpine-patch
     restart: always
     environment:
       - POSTGRES_USER=${PANEL_DB_ROOT_USER}

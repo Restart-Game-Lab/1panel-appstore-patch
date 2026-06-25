@@ -1,0 +1,247 @@
+name: OpenResty + Tongsuo CI/CD
+
+on:
+  push:
+    branches: [main, master]
+    paths: ['build/**', '.github/workflows/docker-build.yml']
+  pull_request:
+    branches: [main, master]
+    paths: ['build/**', '.github/workflows/docker-build.yml']
+  workflow_dispatch:
+    inputs:
+      tongsuo_version:
+        description: 'Tongsuo version'
+        default: '8.5.0-pre1'
+      openresty_version:
+        description: 'OpenResty version (leave empty to build all)'
+        default: ''
+      push_to_registry:
+        description: 'Push to ghcr.io?'
+        type: boolean
+        default: true
+  schedule:
+    - cron: '0 6 * * 1'
+
+env:
+  REGISTRY: ghcr.io
+  TONGSUO_VERSION: "8.5.0-pre1"
+
+jobs:
+  # ============================================================
+  # Job 1: 准备元数据（生成构建矩阵）
+  # ============================================================
+  prepare:
+    name: "prepare / metadata"
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      image: ${{ steps.image-name.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: image-name
+        run: echo "image=${{ env.REGISTRY }}/${{ github.repository }}" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+
+      - id: set-matrix
+        run: |
+          # workflow_dispatch 手动指定单个版本
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.openresty_version }}" ]; then
+            ORV="${{ github.event.inputs.openresty_version }}"
+            case "$ORV" in
+              1.21.4.3) MATRIX="{\"include\":[{\"openresty_version\":\"1.21.4.3\",\"panel_revision\":\"3\",\"ubuntu_codename\":\"focal\"}]}" ;;
+              1.27.1.2) MATRIX="{\"include\":[{\"openresty_version\":\"1.27.1.2\",\"panel_revision\":\"5\",\"ubuntu_codename\":\"focal\"}]}" ;;
+              1.29.2.5) MATRIX="{\"include\":[{\"openresty_version\":\"1.29.2.5\",\"panel_revision\":\"0\",\"ubuntu_codename\":\"noble\"}]}" ;;
+              1.31.1.1) MATRIX="{\"include\":[{\"openresty_version\":\"1.31.1.1\",\"panel_revision\":\"0\",\"ubuntu_codename\":\"noble\"}]}" ;;
+              *) MATRIX="{\"include\":[{\"openresty_version\":\"$ORV\",\"panel_revision\":\"0\",\"ubuntu_codename\":\"noble\"}]}" ;;
+            esac
+          else
+            # 默认构建所有版本
+            MATRIX="{\"include\":[{\"openresty_version\":\"1.21.4.3\",\"panel_revision\":\"3\",\"ubuntu_codename\":\"focal\"},{\"openresty_version\":\"1.27.1.2\",\"panel_revision\":\"5\",\"ubuntu_codename\":\"focal\"},{\"openresty_version\":\"1.29.2.5\",\"panel_revision\":\"0\",\"ubuntu_codename\":\"noble\"},{\"openresty_version\":\"1.31.1.1\",\"panel_revision\":\"0\",\"ubuntu_codename\":\"noble\"}]}"
+          fi
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "Matrix: $MATRIX"
+
+      - name: "build plan"
+        run: |
+          echo "========================================="
+          echo "  Tongsuo   : ${{ env.TONGSUO_VERSION }}"
+          echo "  Image     : ${{ steps.image-name.outputs.image }}"
+          echo "  Matrix    : ${{ steps.set-matrix.outputs.matrix }}"
+          echo "  Event     : ${{ github.event_name }}"
+          echo "========================================="
+
+  # ============================================================
+  # Job 2: 编译镜像 (不推送)
+  # ============================================================
+  build:
+    name: "build / ${{ matrix.openresty_version }}"
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ matrix.openresty_version }}-${{ matrix.panel_revision }}-${{ matrix.ubuntu_codename }}-tongsuo
+          labels: |
+            org.opencontainers.image.title=OpenResty Tongsuo
+            org.opencontainers.image.description=OpenResty ${{ matrix.openresty_version }} + Tongsuo ${{ env.TONGSUO_VERSION }}
+            org.opencontainers.image.version=${{ matrix.openresty_version }}-${{ matrix.panel_revision }}-${{ matrix.ubuntu_codename }}-tongsuo
+            tongsuo.version=${{ env.TONGSUO_VERSION }}
+            openresty.version=${{ matrix.openresty_version }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./build
+          file: ./build/Dockerfile
+          push: false
+          load: ${{ github.event_name == 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            RESTY_OPENSSL_VERSION=${{ env.TONGSUO_VERSION }}
+            RESTY_VERSION=${{ matrix.openresty_version }}
+            PANEL_OPENRESTY_VERSION=${{ matrix.openresty_version }}-${{ matrix.panel_revision }}-${{ matrix.ubuntu_codename }}
+            RESTY_J=4
+          cache-from: type=gha,scope=openresty-${{ matrix.openresty_version }}
+          cache-to: type=gha,mode=max,scope=openresty-${{ matrix.openresty_version }}
+
+  # ============================================================
+  # Job 3: 推送镜像到 ghcr.io
+  # ============================================================
+  push:
+    name: "push / ${{ matrix.openresty_version }}"
+    needs: [prepare, build]
+    if: |
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.push_to_registry != 'false')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ matrix.openresty_version }}-${{ matrix.panel_revision }}-${{ matrix.ubuntu_codename }}-tongsuo
+            type=raw,value=latest,enable=${{ matrix.openresty_version == '1.31.1.1' }}
+          labels: |
+            org.opencontainers.image.title=OpenResty Tongsuo
+            org.opencontainers.image.description=OpenResty ${{ matrix.openresty_version }} + Tongsuo ${{ env.TONGSUO_VERSION }}
+            org.opencontainers.image.version=${{ matrix.openresty_version }}-${{ matrix.panel_revision }}-${{ matrix.ubuntu_codename }}-tongsuo
+            tongsuo.version=${{ env.TONGSUO_VERSION }}
+            openresty.version=${{ matrix.openresty_version }}
+
+      - id: login
+        run: |
+          for i in 1 2 3 4 5; do
+            echo "ghcr.io login attempt $i/5..."
+            if echo "${{ secrets.GITHUB_TOKEN }}" | docker login "${{ env.REGISTRY }}" -u "${{ github.actor }}" --password-stdin 2>&1; then
+              echo "ghcr.io login OK (attempt $i)"
+              exit 0
+            fi
+            [ $i -lt 5 ] && sleep $((5 * i))
+          done
+          echo "ghcr.io login FAILED after 5 attempts"
+          exit 1
+
+      - id: push-step
+        uses: docker/build-push-action@v6
+        with:
+          context: ./build
+          file: ./build/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            RESTY_OPENSSL_VERSION=${{ env.TONGSUO_VERSION }}
+            RESTY_VERSION=${{ matrix.openresty_version }}
+            PANEL_OPENRESTY_VERSION=${{ matrix.openresty_version }}-${{ matrix.panel_revision }}-${{ matrix.ubuntu_codename }}
+            RESTY_J=4
+          cache-from: type=gha,scope=openresty-${{ matrix.openresty_version }}
+          cache-to: type=gha,mode=max,scope=openresty-${{ matrix.openresty_version }}
+
+  # ============================================================
+  # Job 4: 拉取验证
+  # ============================================================
+  verify:
+    name: "verify / ${{ matrix.openresty_version }}"
+    needs: [prepare, push]
+    if: |
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.push_to_registry != 'false')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - run: |
+          for i in 1 2 3 4 5; do
+            echo "ghcr.io login attempt $i/5..."
+            if echo "${{ secrets.GITHUB_TOKEN }}" | docker login "${{ env.REGISTRY }}" -u "${{ github.actor }}" --password-stdin 2>&1; then
+              echo "ghcr.io login OK (attempt $i)"
+              exit 0
+            fi
+            [ $i -lt 5 ] && sleep $((5 * i))
+          done
+          echo "ghcr.io login FAILED after 5 attempts"
+          exit 1
+
+      - name: "pull image"
+        run: |
+          TAG="${{ matrix.openresty_version }}-${{ matrix.panel_revision }}-${{ matrix.ubuntu_codename }}-tongsuo"
+          docker pull "${{ needs.prepare.outputs.image }}:${TAG}"
+
+      - name: "verify / tongsuo version"
+        run: |
+          TAG="${{ matrix.openresty_version }}-${{ matrix.panel_revision }}-${{ matrix.ubuntu_codename }}-tongsuo"
+          docker run --rm "${{ needs.prepare.outputs.image }}:${TAG}" \
+            /usr/local/openresty/openssl3/bin/openssl version
+
+      - name: "verify / SM2 SM3 SM4"
+        run: |
+          TAG="${{ matrix.openresty_version }}-${{ matrix.panel_revision }}-${{ matrix.ubuntu_codename }}-tongsuo"
+          echo "--- SM2 ---"
+          docker run --rm "${{ needs.prepare.outputs.image }}:${TAG}" \
+            /usr/local/openresty/openssl3/bin/openssl ecparam -list_curves 2>&1 | grep -i sm2 || echo "SM2: missing"
+          echo "--- SM3 ---"
+          docker run --rm "${{ needs.prepare.outputs.image }}:${TAG}" \
+            bash -c "echo 'test' | /usr/local/openresty/openssl3/bin/openssl dgst -sm3"
+          echo "--- SM4 ---"
+          docker run --rm "${{ needs.prepare.outputs.image }}:${TAG}" \
+            /usr/local/openresty/openssl3/bin/openssl enc -sm4-cbc -help 2>&1 | head -1 || echo "SM4: missing"
+
+      - name: "verify / openresty"
+        run: |
+          TAG="${{ matrix.openresty_version }}-${{ matrix.panel_revision }}-${{ matrix.ubuntu_codename }}-tongsuo"
+          docker run --rm "${{ needs.prepare.outputs.image }}:${TAG}" \
+            /usr/local/openresty/nginx/sbin/nginx -V 2>&1 | grep -E "built with|nginx version"
+          docker run --rm "${{ needs.prepare.outputs.image }}:${TAG}" \
+            /usr/local/openresty/nginx/sbin/nginx -t 2>&1
+
+      - name: "summary"
+        run: |
+          TAG="${{ matrix.openresty_version }}-${{ matrix.panel_revision }}-${{ matrix.ubuntu_codename }}-tongsuo"
+          echo "========================================="
+          echo "  Build Complete"
+          echo "  OpenResty : ${{ matrix.openresty_version }}"
+          echo "  Tongsuo   : ${{ env.TONGSUO_VERSION }}"
+          echo "  Image     : ${{ needs.prepare.outputs.image }}:${TAG}"
+          echo "========================================="

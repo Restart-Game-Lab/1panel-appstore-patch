@@ -1,6 +1,6 @@
 services:
   openresty:
-    image: 1panel/openresty:1.21.4.3-3-3-focal
+    image: ghcr.io/restart-game-lab/openresty-tongsuo:1.21.4.3-3-3-focal-tongsuo
     container_name: ${CONTAINER_NAME}
     restart: always
     network_mode: host
