@@ -1,0 +1,11 @@
+services:
+  openresty-tongsuo:
+    container_name: ${CONTAINER_NAME}
+    image: ghcr.io/restart-game-lab/openresty-tongsuo:1.31.1.1-0-noble-tongsuo
+    restart: always
+    network_mode: host
+    volumes:
+      - ${WEBSITE_DIR}:/opt/1panel/openresty/nginx/conf.d
+      - ./conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+      - ./conf/nginx.vh.default.conf:/usr/local/openresty/nginx/conf/nginx.vh.default.conf
+      - ./log:/usr/local/openresty/nginx/logs

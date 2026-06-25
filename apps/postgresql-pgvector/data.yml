@@ -1,0 +1,36 @@
+additionalProperties:
+    formFields:
+        - default: postgres
+          envKey: PANEL_DB_ROOT_USER
+          labelEn: User
+          labelZh: 用户名
+          random: true
+          required: true
+          rule: paramCommon
+          type: text
+        - default: postgres
+          envKey: PANEL_DB_ROOT_PASSWORD
+          labelEn: Password
+          labelZh: 密码
+          random: true
+          required: true
+          rule: paramComplexity
+          type: password
+        - default: 5432
+          envKey: PANEL_DB_PORT
+          labelEn: Port
+          labelZh: 端口
+          required: true
+          rule: paramPort
+          type: number
+key: postgresql-pgvector
+name: PostgreSQL pgvector
+tags:
+    - Database
+type: runtime
+limit: 0
+crossVersionUpdate: false
+memoryRequired: 1024
+description:
+    en: PostgreSQL with pgvector, PostGIS, pg_cron, pg_repack and other extensions pre-installed.
+    zh: 预装 pgvector、PostGIS、pg_cron、pg_repack 等扩展的 PostgreSQL。

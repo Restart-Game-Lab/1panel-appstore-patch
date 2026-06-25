@@ -1,0 +1,25 @@
+additionalProperties:
+    formFields:
+        - default: postgres
+          envKey: PANEL_DB_ROOT_USER
+          labelEn: User
+          labelZh: 用户名
+          random: true
+          required: true
+          rule: paramCommon
+          type: text
+        - default: postgres
+          envKey: PANEL_DB_ROOT_PASSWORD
+          labelEn: Password
+          labelZh: 密码
+          random: true
+          required: true
+          rule: paramComplexity
+          type: password
+        - default: 5432
+          envKey: PANEL_DB_PORT
+          labelEn: Port
+          labelZh: 端口
+          required: true
+          rule: paramPort
+          type: number
