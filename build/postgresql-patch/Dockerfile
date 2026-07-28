@@ -84,9 +84,9 @@ RUN cd /tmp \
     && tar xzf postgis.tar.gz \
     && cd postgis-${POSTGIS_VERSION} \
     && ./configure --with-pgconfig=$(which pg_config) --without-raster --without-sfcgal --without-topology \
+    && sed -i '/^SUBDIRS/s/\braster\b//' postgis/Makefile 2>/dev/null || true \
     && make -C liblwgeom -j$(nproc) \
     && make -C liblwgeom install \
-    && touch postgis/rtpostgis.sql postgis/rtpostgis_upgrade.sql.in 2>/dev/null || true \
     && make -C postgis -j$(nproc) \
     && make -C postgis install \
     && make -C extensions -j$(nproc) \
