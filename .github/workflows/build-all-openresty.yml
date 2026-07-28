@@ -17,12 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - openresty_version: "1.21.4.3"
-            panel_version: "3-3"
-            codename: "focal"
-          - openresty_version: "1.27.1.2"
-            panel_version: "5-1"
-            codename: "focal"
           - openresty_version: "1.29.2.5"
             panel_version: "0"
             codename: "noble"
