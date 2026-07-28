@@ -1,7 +1,7 @@
 services:
   openresty:
-    image: ghcr.io/restart-game-lab/openresty-tongsuo:1.21.4.3-3-3-focal-tongsuo
     container_name: ${CONTAINER_NAME}
+    image: ghcr.io/restart-game-lab/openresty-tongsuo:1.21.4.3-3-3-focal-tongsuo
     restart: always
     network_mode: host
     volumes:
@@ -9,11 +9,14 @@ services:
       - ./conf/fastcgi_params:/usr/local/openresty/nginx/conf/fastcgi_params
       - ./conf/fastcgi-php.conf:/usr/local/openresty/nginx/conf/fastcgi-php.conf
       - ./conf/mime.types:/usr/local/openresty/nginx/conf/mime.types
+      - ./conf/default:/usr/local/openresty/nginx/conf/default/
+      - ./conf/ssl:/usr/local/openresty/nginx/conf/ssl/
       - ./log:/var/log/nginx
-      - ./conf/conf.d:/usr/local/openresty/nginx/conf/conf.d/
-      - ./www:/www
       - ./root:/usr/share/nginx/html
       - /etc/localtime:/etc/localtime
       - ./1pwaf/data:/usr/local/openresty/1pwaf/data
+      - ${WEBSITE_DIR}:/www
+      - ${WEBSITE_DIR}/conf.d:/usr/local/openresty/nginx/conf/conf.d/
+      - ${WEBSITE_DIR}/stream.d:/usr/local/openresty/nginx/conf/stream.d/
     labels:
       createdBy: "Apps"
