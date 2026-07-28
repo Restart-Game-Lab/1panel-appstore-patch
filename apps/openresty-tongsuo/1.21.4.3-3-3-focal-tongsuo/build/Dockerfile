@@ -126,6 +126,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
         wget \
         zlib1g-dev \
         git \
+        libbrotli-dev \
         ${RESTY_ADD_PACKAGE_BUILDDEPS} \
         ${RESTY_ADD_PACKAGE_RUNDEPS} \
     && cd /tmp \
