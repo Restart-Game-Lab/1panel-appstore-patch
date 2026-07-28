@@ -6,7 +6,7 @@ on:
 env:
   REGISTRY: ghcr.io
   SOURCE_REPO: Restart-Game-Lab/postgresql-patch
-  SOURCE_REF: main
+  SOURCE_REF: master
 
 jobs:
   build:
