@@ -88,7 +88,7 @@ jobs:
 
       - name: Verify image
         run: |
-          IMAGE="ghcr.io/${{ github.repository }}/openresty-tongsuo:${{ matrix.version_dir }}"
+          IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')/openresty-tongsuo:${{ matrix.version_dir }}"
           docker pull "${IMAGE}"
           docker run --rm "${IMAGE}" sh -c "
             echo '=== Tongsuo Version ==='

@@ -78,7 +78,7 @@ jobs:
 
       - name: Verify image
         run: |
-          IMAGE="ghcr.io/${{ github.repository }}/postgresql-patch:${{ matrix.pg_version }}-alpine"
+          IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')/postgresql-patch:${{ matrix.pg_version }}-alpine"
           docker pull "${IMAGE}"
           docker run --rm "${IMAGE}" sh -c "
             echo '=== PostgreSQL Version ==='
