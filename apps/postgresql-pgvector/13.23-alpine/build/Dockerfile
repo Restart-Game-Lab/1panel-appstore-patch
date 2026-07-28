@@ -79,10 +79,10 @@ RUN cd /tmp \
     && tar xzf postgis.tar.gz \
     && cd postgis-${POSTGIS_VERSION} \
     && ./configure --with-pgconfig=$(which pg_config) --without-raster --without-sfcgal --without-topology \
-    && rm -rf raster \
-    && make -C liblwgeom -j$(nproc) && make -C liblwgeom install \
-    && make -C postgis -j$(nproc) && make -C postgis install \
-    && make -C extensions -j$(nproc) && make -C extensions install \
+    && sed -i '/raster/d' extensions/postgis/Makefile 2>/dev/null || true \
+    && rm -rf raster extensions/postgis_raster extensions/postgis_sfcgal 2>/dev/null || true \
+    && make -j$(nproc) \
+    && make install \
     && cp $(pg_config --sharedir)/extension/postgis* /tmp/extensions-build/ \
     && cp $(pg_config --pkglibdir)/postgis*.so /tmp/extensions-build/
 
