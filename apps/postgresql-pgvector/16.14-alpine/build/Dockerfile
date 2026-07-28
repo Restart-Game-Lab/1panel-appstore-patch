@@ -73,13 +73,14 @@ RUN PG_MAJOR=$(echo "${PG_VERSION}" | cut -d. -f1) \
     && cp $(pg_config --sharedir)/extension/pg_hint_plan* /tmp/extensions-build/ \
     && cp $(pg_config --pkglibdir)/pg_hint_plan.so /tmp/extensions-build/
 
-# 5. PostGIS (compile from source, strip raster to avoid build errors)
+# 5. PostGIS (compile from source, --without-raster then remove raster dir)
 RUN cd /tmp \
     && curl -fsSL "https://download.osgeo.org/postgis/source/postgis-${POSTGIS_VERSION}.tar.gz" -o postgis.tar.gz \
     && tar xzf postgis.tar.gz \
     && cd postgis-${POSTGIS_VERSION} \
     && ./configure --with-pgconfig=$(which pg_config) --without-raster --without-sfcgal --without-topology \
-    && find . -name Makefile -exec sed -i 's/\braster\b//g' {} \; 2>/dev/null || true \
+    && rm -rf raster \
+    && sed -i '/^SUBDIRS/s/\braster\b//' Makefile 2>/dev/null || true \
     && make -j$(nproc) \
     && make install \
     && cp $(pg_config --sharedir)/extension/postgis* /tmp/extensions-build/ \
