@@ -1,8 +1,8 @@
+FROM postgres:${PG_VERSION}-alpine AS builder
+
 ARG PG_VERSION
 ARG POSTGIS_VERSION=3.5.3
-ARG PGVECTOR_VERSION=0.8.0
-
-FROM postgres:${PG_VERSION}-alpine AS builder
+ARG PGVECTOR_VERSION
 
 RUN apk add --no-cache \
     build-base \
@@ -85,6 +85,10 @@ RUN cd /tmp \
     && cp $(pg_config --pkglibdir)/postgis*.so /tmp/extensions-build/
 
 FROM postgres:${PG_VERSION}-alpine
+
+ARG PG_VERSION
+ARG POSTGIS_VERSION=3.5.3
+ARG PGVECTOR_VERSION
 
 RUN apk add --no-cache \
     geos \
