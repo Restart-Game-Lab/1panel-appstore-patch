@@ -57,7 +57,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/postgresql-patch
+          images: ghcr.io/${{ github.repository }}/postgresql-patch
           tags: |
             type=raw,value=${{ matrix.pg_version }}-alpine-patch
             type=raw,value=latest,enable=${{ matrix.pg_version == '18.4' }}
@@ -85,7 +85,7 @@ jobs:
       - name: Verify image
         run: |
           TAG="${{ matrix.pg_version }}-alpine-patch"
-          IMAGE="ghcr.io/${{ github.repository_owner }}/postgresql-patch:${TAG}"
+          IMAGE="ghcr.io/${{ github.repository }}/postgresql-patch:${TAG}"
           docker pull "${IMAGE}"
           docker run --rm "${IMAGE}" sh -c "
             echo '=== PostgreSQL Version ==='

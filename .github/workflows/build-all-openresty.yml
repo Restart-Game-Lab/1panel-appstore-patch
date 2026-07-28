@@ -60,7 +60,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/openresty-tongsuo
+          images: ghcr.io/${{ github.repository }}/openresty-tongsuo
           tags: |
             type=raw,value=${{ matrix.openresty_version }}-${{ matrix.panel_version }}-${{ matrix.codename }}-tongsuo
             type=raw,value=latest,enable=${{ matrix.latest == true }}
@@ -90,7 +90,7 @@ jobs:
       - name: Verify image
         run: |
           TAG="${{ matrix.openresty_version }}-${{ matrix.panel_version }}-${{ matrix.codename }}-tongsuo"
-          IMAGE="ghcr.io/${{ github.repository_owner }}/openresty-tongsuo:${TAG}"
+          IMAGE="ghcr.io/${{ github.repository }}/openresty-tongsuo:${TAG}"
           docker pull "${IMAGE}"
           docker run --rm "${IMAGE}" sh -c "
             echo '=== Tongsuo Version ==='

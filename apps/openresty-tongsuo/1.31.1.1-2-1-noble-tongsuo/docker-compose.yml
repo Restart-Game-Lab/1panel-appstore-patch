@@ -1,7 +1,7 @@
 services:
   openresty:
     container_name: ${CONTAINER_NAME}
-    image: ghcr.io/restart-game-lab/openresty-tongsuo:1.31.1.1-2-1-noble-tongsuo
+    image: ghcr.io/restart-game-lab/1panel-appstore-patch/openresty-tongsuo:1.31.1.1-2-1-noble-tongsuo
     restart: always
     network_mode: host
     volumes:
