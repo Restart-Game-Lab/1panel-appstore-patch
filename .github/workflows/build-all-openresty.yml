@@ -5,7 +5,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  TONGSUO_VERSION: "8.5.0-pre1"
 
 jobs:
   build:
@@ -21,22 +20,27 @@ jobs:
             panel_version: "3-3"
             codename: "focal"
             version_dir: "1.21.4.3-3-3-focal-tongsuo"
+            tongsuo_version: "8.4.0"
           - openresty_version: "1.27.1.2"
             panel_version: "5-1"
             codename: "focal"
             version_dir: "1.27.1.2-5-1-focal-tongsuo"
+            tongsuo_version: "8.4.0"
           - openresty_version: "1.29.2.5"
             panel_version: "0"
             codename: "noble"
             version_dir: "1.29.2.5-0-noble-tongsuo"
+            tongsuo_version: "8.5.0-pre1"
           - openresty_version: "1.31.1.1"
             panel_version: "0"
             codename: "noble"
             version_dir: "1.31.1.1-0-noble-tongsuo"
+            tongsuo_version: "8.5.0-pre1"
           - openresty_version: "1.31.1.1"
             panel_version: "2-1"
             codename: "noble"
             version_dir: "1.31.1.1-2-1-noble-tongsuo"
+            tongsuo_version: "8.5.0-pre1"
             latest: true
 
     steps:
@@ -62,9 +66,9 @@ jobs:
             type=raw,value=latest,enable=${{ matrix.latest == true }}
           labels: |
             org.opencontainers.image.title=OpenResty Tongsuo
-            org.opencontainers.image.description=OpenResty ${{ matrix.openresty_version }} + Tongsuo ${{ env.TONGSUO_VERSION }}
+            org.opencontainers.image.description=OpenResty ${{ matrix.openresty_version }} + Tongsuo ${{ matrix.tongsuo_version }}
             org.opencontainers.image.version=${{ matrix.version_dir }}
-            tongsuo.version=${{ env.TONGSUO_VERSION }}
+            tongsuo.version=${{ matrix.tongsuo_version }}
             openresty.version=${{ matrix.openresty_version }}
 
       - name: Build and push
@@ -76,7 +80,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            RESTY_OPENSSL_VERSION=${{ env.TONGSUO_VERSION }}
+            RESTY_OPENSSL_VERSION=${{ matrix.tongsuo_version }}
             RESTY_VERSION=${{ matrix.openresty_version }}
             RESTY_J=4
           cache-from: type=gha,scope=openresty-${{ matrix.version_dir }}

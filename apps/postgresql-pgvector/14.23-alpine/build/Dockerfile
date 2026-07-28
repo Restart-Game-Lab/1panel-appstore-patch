@@ -1,3 +1,4 @@
+ARG PG_VERSION
 FROM postgres:${PG_VERSION}-alpine AS builder
 
 ARG PG_VERSION
@@ -84,6 +85,7 @@ RUN cd /tmp \
     && cp $(pg_config --sharedir)/extension/postgis* /tmp/extensions-build/ \
     && cp $(pg_config --pkglibdir)/postgis*.so /tmp/extensions-build/
 
+ARG PG_VERSION
 FROM postgres:${PG_VERSION}-alpine
 
 ARG PG_VERSION
