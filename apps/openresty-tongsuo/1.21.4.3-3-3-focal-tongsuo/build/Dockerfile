@@ -1,6 +1,6 @@
 # Dockerfile - Ubuntu Focal
 # Based on https://github.com/openresty/docker-openresty
-# Modified: Tongsuo 8.5.0-pre1 replaces OpenSSL, ngx_brotli built from source
+# Modified: Tongsuo 8.4.0 replaces OpenSSL, ngx_brotli built from source
 
 ARG RESTY_IMAGE_BASE="ubuntu"
 ARG RESTY_IMAGE_TAG="focal"
@@ -14,8 +14,8 @@ ARG RESTY_IMAGE_TAG="focal"
 ARG RESTY_VERSION="1.21.4.3"
 ARG RESTY_LUAROCKS_VERSION="3.12.2"
 
-# Tongsuo (铜锁) 8.5.0-pre1 replaces OpenSSL - adds SM2/SM3/SM4/TLCP/NTLS support
-ARG RESTY_OPENSSL_VERSION="8.5.0-pre1"
+# Tongsuo (铜锁) 8.4.0 replaces OpenSSL - adds SM2/SM3/SM4/TLCP/NTLS support
+ARG RESTY_OPENSSL_VERSION="8.4.0"
 ARG RESTY_OPENSSL_URL_BASE="https://github.com/Tongsuo-Project/Tongsuo/archive/refs/tags"
 ARG RESTY_OPENSSL_BUILD_OPTIONS="enable-ntls enable-cms enable-ktls"
 
@@ -117,6 +117,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
         libgd-dev \
         libgeoip-dev \
         libncurses5-dev \
+        libpcre3-dev \
         libperl-dev \
         libreadline-dev \
         libxslt1-dev \
@@ -132,7 +133,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && cd /tmp \
     && bash /tmp/pre.sh \
     && if [ -n "${RESTY_EVAL_PRE_CONFIGURE}" ]; then eval $(echo ${RESTY_EVAL_PRE_CONFIGURE}); fi \
-    && curl -fSL "${RESTY_OPENSSL_URL_BASE}/${RESTY_OPENSSL_VERSION}.tar.gz" -o openssl-${RESTY_OPENSSL_VERSION}.tar.gz \
+    && curl --retry 5 --retry-delay 15 -fSL "${RESTY_OPENSSL_URL_BASE}/${RESTY_OPENSSL_VERSION}.tar.gz" -o openssl-${RESTY_OPENSSL_VERSION}.tar.gz \
     && tar xzf openssl-${RESTY_OPENSSL_VERSION}.tar.gz \
     && mv Tongsuo-${RESTY_OPENSSL_VERSION} openssl-${RESTY_OPENSSL_VERSION} \
     && cd openssl-${RESTY_OPENSSL_VERSION} \
@@ -145,7 +146,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && make -j${RESTY_J} \
     && make -j${RESTY_J} install_sw \
     && cd /tmp \
-    && curl -fSL "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${RESTY_PCRE_VERSION}/pcre2-${RESTY_PCRE_VERSION}.tar.gz" -o pcre2-${RESTY_PCRE_VERSION}.tar.gz \
+    && curl --retry 5 --retry-delay 15 -fSL "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${RESTY_PCRE_VERSION}/pcre2-${RESTY_PCRE_VERSION}.tar.gz" -o pcre2-${RESTY_PCRE_VERSION}.tar.gz \
     && echo "${RESTY_PCRE_SHA256}  pcre2-${RESTY_PCRE_VERSION}.tar.gz" | shasum -a 256 --check \
     && tar xzf pcre2-${RESTY_PCRE_VERSION}.tar.gz \
     && cd /tmp/pcre2-${RESTY_PCRE_VERSION} \
@@ -156,7 +157,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && CFLAGS="-g -O3" make -j${RESTY_J} \
     && CFLAGS="-g -O3" make -j${RESTY_J} install \
     && cd /tmp \
-    && curl -fSL "https://openresty.org/download/openresty-${RESTY_VERSION}.tar.gz" -o openresty-${RESTY_VERSION}.tar.gz \
+    && curl --retry 5 --retry-delay 15 -fSL "https://openresty.org/download/openresty-${RESTY_VERSION}.tar.gz" -o openresty-${RESTY_VERSION}.tar.gz \
     && if [ ! -d openresty-${RESTY_VERSION} ]; then tar xzf openresty-${RESTY_VERSION}.tar.gz; fi \
     && git clone --recurse-submodules -j${RESTY_J} https://github.com/google/ngx_brotli.git /usr/local/openresty/modules/ngx_brotli \
     && cd /tmp/openresty-${RESTY_VERSION} \
@@ -169,7 +170,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
         openssl-${RESTY_OPENSSL_VERSION}.tar.gz openssl-${RESTY_OPENSSL_VERSION} \
         pcre2-${RESTY_PCRE_VERSION}.tar.gz pcre2-${RESTY_PCRE_VERSION} \
         openresty-${RESTY_VERSION}.tar.gz openresty-${RESTY_VERSION} \
-    && curl -fSL "https://luarocks.org/releases/luarocks-${RESTY_LUAROCKS_VERSION}.tar.gz" -o luarocks-${RESTY_LUAROCKS_VERSION}.tar.gz \
+    && curl --retry 5 --retry-delay 15 -fSL "https://luarocks.org/releases/luarocks-${RESTY_LUAROCKS_VERSION}.tar.gz" -o luarocks-${RESTY_LUAROCKS_VERSION}.tar.gz \
     && tar xzf luarocks-${RESTY_LUAROCKS_VERSION}.tar.gz \
     && cd luarocks-${RESTY_LUAROCKS_VERSION} \
     && ./configure \

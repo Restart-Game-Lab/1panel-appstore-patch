@@ -133,7 +133,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && cd /tmp \
     && bash /tmp/pre.sh \
     && if [ -n "${RESTY_EVAL_PRE_CONFIGURE}" ]; then eval $(echo ${RESTY_EVAL_PRE_CONFIGURE}); fi \
-    && curl -fSL "${RESTY_OPENSSL_URL_BASE}/${RESTY_OPENSSL_VERSION}.tar.gz" -o openssl-${RESTY_OPENSSL_VERSION}.tar.gz \
+    && curl --retry 5 --retry-delay 15 -fSL "${RESTY_OPENSSL_URL_BASE}/${RESTY_OPENSSL_VERSION}.tar.gz" -o openssl-${RESTY_OPENSSL_VERSION}.tar.gz \
     && tar xzf openssl-${RESTY_OPENSSL_VERSION}.tar.gz \
     && mv Tongsuo-${RESTY_OPENSSL_VERSION} openssl-${RESTY_OPENSSL_VERSION} \
     && cd openssl-${RESTY_OPENSSL_VERSION} \
@@ -146,7 +146,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && make -j${RESTY_J} \
     && make -j${RESTY_J} install_sw \
     && cd /tmp \
-    && curl -fSL "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${RESTY_PCRE_VERSION}/pcre2-${RESTY_PCRE_VERSION}.tar.gz" -o pcre2-${RESTY_PCRE_VERSION}.tar.gz \
+    && curl --retry 5 --retry-delay 15 -fSL "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${RESTY_PCRE_VERSION}/pcre2-${RESTY_PCRE_VERSION}.tar.gz" -o pcre2-${RESTY_PCRE_VERSION}.tar.gz \
     && echo "${RESTY_PCRE_SHA256}  pcre2-${RESTY_PCRE_VERSION}.tar.gz" | shasum -a 256 --check \
     && tar xzf pcre2-${RESTY_PCRE_VERSION}.tar.gz \
     && cd /tmp/pcre2-${RESTY_PCRE_VERSION} \
@@ -157,7 +157,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && CFLAGS="-g -O3" make -j${RESTY_J} \
     && CFLAGS="-g -O3" make -j${RESTY_J} install \
     && cd /tmp \
-    && curl -fSL "https://openresty.org/download/openresty-${RESTY_VERSION}.tar.gz" -o openresty-${RESTY_VERSION}.tar.gz \
+    && curl --retry 5 --retry-delay 15 -fSL "https://openresty.org/download/openresty-${RESTY_VERSION}.tar.gz" -o openresty-${RESTY_VERSION}.tar.gz \
     && if [ ! -d openresty-${RESTY_VERSION} ]; then tar xzf openresty-${RESTY_VERSION}.tar.gz; fi \
     && git clone --recurse-submodules -j${RESTY_J} https://github.com/google/ngx_brotli.git /usr/local/openresty/modules/ngx_brotli \
     && cd /tmp/openresty-${RESTY_VERSION} \
@@ -170,7 +170,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
         openssl-${RESTY_OPENSSL_VERSION}.tar.gz openssl-${RESTY_OPENSSL_VERSION} \
         pcre2-${RESTY_PCRE_VERSION}.tar.gz pcre2-${RESTY_PCRE_VERSION} \
         openresty-${RESTY_VERSION}.tar.gz openresty-${RESTY_VERSION} \
-    && curl -fSL "https://luarocks.org/releases/luarocks-${RESTY_LUAROCKS_VERSION}.tar.gz" -o luarocks-${RESTY_LUAROCKS_VERSION}.tar.gz \
+    && curl --retry 5 --retry-delay 15 -fSL "https://luarocks.org/releases/luarocks-${RESTY_LUAROCKS_VERSION}.tar.gz" -o luarocks-${RESTY_LUAROCKS_VERSION}.tar.gz \
     && tar xzf luarocks-${RESTY_LUAROCKS_VERSION}.tar.gz \
     && cd luarocks-${RESTY_LUAROCKS_VERSION} \
     && ./configure \

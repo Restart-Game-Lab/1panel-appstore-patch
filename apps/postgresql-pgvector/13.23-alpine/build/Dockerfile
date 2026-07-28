@@ -75,10 +75,12 @@ RUN PG_MAJOR=$(echo "${PG_VERSION}" | cut -d. -f1) \
 
 # 5. PostGIS (compile from source, --without-raster then remove raster dir)
 RUN cd /tmp \
-    && curl -fsSL "https://download.osgeo.org/postgis/source/postgis-${POSTGIS_VERSION}.tar.gz" -o postgis.tar.gz \
+    && curl --retry 5 --retry-delay 15 -fsSL "https://download.osgeo.org/postgis/source/postgis-${POSTGIS_VERSION}.tar.gz" -o postgis.tar.gz \
     && tar xzf postgis.tar.gz \
     && cd postgis-${POSTGIS_VERSION} \
     && ./configure --with-pgconfig=$(which pg_config) --without-raster --without-sfcgal --without-topology \
+    && sed -i '/^SUBDIRS/s/ raster//g' GNUmakefile \
+    && sed -i '/raster/d' utils/Makefile 2>/dev/null || true \
     && sed -i '/raster/d' extensions/postgis/Makefile 2>/dev/null || true \
     && rm -rf raster extensions/postgis_raster extensions/postgis_sfcgal 2>/dev/null || true \
     && make -j$(nproc) \
