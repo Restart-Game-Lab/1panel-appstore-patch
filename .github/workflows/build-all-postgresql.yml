@@ -81,6 +81,6 @@ jobs:
           docker run --rm "${IMAGE}" sh -c "
             echo '=== PostgreSQL Version ==='
             postgres --version
-            echo '=== pgvector Check ==='
-            ls /usr/local/lib/postgresql/vector.so 2>/dev/null && echo 'pgvector .so found' || echo 'pgvector .so not found'
+            echo '=== Extensions Check ==='
+            find /usr/local/lib /usr/local/share -name 'vector.so' -o -name 'pg_repack.so' -o -name 'pg_cron.so' -o -name 'pg_hint_plan.so' -o -name 'postgis*.so' 2>/dev/null | while read f; do echo \"OK: \$(basename \$f)\"; done
           "
