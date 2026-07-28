@@ -17,15 +17,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - openresty_version: "1.21.4.3"
+            panel_version: "3-3"
+            codename: "focal"
+            version_dir: "1.21.4.3-3-3-focal-tongsuo"
+          - openresty_version: "1.27.1.2"
+            panel_version: "5-1"
+            codename: "focal"
+            version_dir: "1.27.1.2-5-1-focal-tongsuo"
           - openresty_version: "1.29.2.5"
             panel_version: "0"
             codename: "noble"
+            version_dir: "1.29.2.5-0-noble-tongsuo"
           - openresty_version: "1.31.1.1"
             panel_version: "0"
             codename: "noble"
+            version_dir: "1.31.1.1-0-noble-tongsuo"
           - openresty_version: "1.31.1.1"
             panel_version: "2-1"
             codename: "noble"
+            version_dir: "1.31.1.1-2-1-noble-tongsuo"
             latest: true
 
     steps:
@@ -47,19 +58,19 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}/openresty-tongsuo
           tags: |
-            type=raw,value=${{ matrix.openresty_version }}-${{ matrix.panel_version }}-${{ matrix.codename }}-tongsuo
+            type=raw,value=${{ matrix.version_dir }}
             type=raw,value=latest,enable=${{ matrix.latest == true }}
           labels: |
             org.opencontainers.image.title=OpenResty Tongsuo
             org.opencontainers.image.description=OpenResty ${{ matrix.openresty_version }} + Tongsuo ${{ env.TONGSUO_VERSION }}
-            org.opencontainers.image.version=${{ matrix.openresty_version }}-${{ matrix.panel_version }}-${{ matrix.codename }}-tongsuo
+            org.opencontainers.image.version=${{ matrix.version_dir }}
             tongsuo.version=${{ env.TONGSUO_VERSION }}
             openresty.version=${{ matrix.openresty_version }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./build/openresty-tongsuo
+          context: ./apps/openresty-tongsuo/${{ matrix.version_dir }}/build
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
@@ -67,15 +78,13 @@ jobs:
           build-args: |
             RESTY_OPENSSL_VERSION=${{ env.TONGSUO_VERSION }}
             RESTY_VERSION=${{ matrix.openresty_version }}
-            PANEL_OPENRESTY_VERSION=${{ matrix.openresty_version }}-${{ matrix.panel_version }}-${{ matrix.codename }}
             RESTY_J=4
-          cache-from: type=gha,scope=openresty-${{ matrix.openresty_version }}-${{ matrix.panel_version }}-${{ matrix.codename }}
-          cache-to: type=gha,mode=max,scope=openresty-${{ matrix.openresty_version }}-${{ matrix.panel_version }}-${{ matrix.codename }}
+          cache-from: type=gha,scope=openresty-${{ matrix.version_dir }}
+          cache-to: type=gha,mode=max,scope=openresty-${{ matrix.version_dir }}
 
       - name: Verify image
         run: |
-          TAG="${{ matrix.openresty_version }}-${{ matrix.panel_version }}-${{ matrix.codename }}-tongsuo"
-          IMAGE="ghcr.io/${{ github.repository }}/openresty-tongsuo:${TAG}"
+          IMAGE="ghcr.io/${{ github.repository }}/openresty-tongsuo:${{ matrix.version_dir }}"
           docker pull "${IMAGE}"
           docker run --rm "${IMAGE}" sh -c "
             echo '=== Tongsuo Version ==='

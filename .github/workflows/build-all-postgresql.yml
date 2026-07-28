@@ -5,6 +5,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  POSTGIS_VERSION: "3.5.3"
 
 jobs:
   build:
@@ -50,19 +51,20 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}/postgresql-patch
           tags: |
-            type=raw,value=${{ matrix.pg_version }}-alpine-patch
+            type=raw,value=${{ matrix.pg_version }}-alpine
             type=raw,value=latest,enable=${{ matrix.pg_version == '18.4' }}
           labels: |
             org.opencontainers.image.title=PostgreSQL Patch
-            org.opencontainers.image.description=PostgreSQL ${{ matrix.pg_version }} + pre-compiled extensions
-            org.opencontainers.image.version=${{ matrix.pg_version }}-alpine-patch
+            org.opencontainers.image.description=PostgreSQL ${{ matrix.pg_version }} + pgvector + pg_repack + pg_hint_plan + pg_cron + PostGIS
+            org.opencontainers.image.version=${{ matrix.pg_version }}-alpine
             pg.version=${{ matrix.pg_version }}
-            extensions.included=pgvector,pg_repack,pg_hint_plan,pg_cron,postgis
+            extensions.pgvector.version=${{ matrix.pgvector_version }}
+            extensions.postgis.version=${{ env.POSTGIS_VERSION }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./build/postgresql-patch
+          context: ./apps/postgresql-pgvector/${{ matrix.pg_version }}-alpine/build
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
@@ -70,13 +72,13 @@ jobs:
           build-args: |
             PG_VERSION=${{ matrix.pg_version }}
             PGVECTOR_VERSION=${{ matrix.pgvector_version }}
+            POSTGIS_VERSION=${{ env.POSTGIS_VERSION }}
           cache-from: type=gha,scope=pg${{ matrix.pg_version }}
           cache-to: type=gha,mode=max,scope=pg${{ matrix.pg_version }}
 
       - name: Verify image
         run: |
-          TAG="${{ matrix.pg_version }}-alpine-patch"
-          IMAGE="ghcr.io/${{ github.repository }}/postgresql-patch:${TAG}"
+          IMAGE="ghcr.io/${{ github.repository }}/postgresql-patch:${{ matrix.pg_version }}-alpine"
           docker pull "${IMAGE}"
           docker run --rm "${IMAGE}" sh -c "
             echo '=== PostgreSQL Version ==='
