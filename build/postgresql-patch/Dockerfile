@@ -1,10 +1,7 @@
 # Dockerfile - PostgreSQL Patch (常用扩展预编译镜像)
-# Based on https://github.com/1Panel-dev/appstore/tree/dev/apps/postgresql
 # 预编译扩展: pgvector, pg_repack, pg_cron, pg_hint_plan
 # 内核 contrib: pg_stat_statements, pg_trgm, pgcrypto, hstore, pg_prewarm 等
-#
-# 用法:
-#   docker build -t postgresql-patch ./build
+# PostGIS 通过 apk 安装 (避免跨版本编译兼容问题)
 
 ARG PG_VERSION=18.4
 
@@ -13,7 +10,6 @@ FROM postgres:${PG_VERSION}-alpine AS builder
 
 ARG PG_VERSION=18.4
 ARG PGVECTOR_VERSION=0.8.2
-ARG POSTGIS_VERSION=3.6.3
 
 RUN apk add --no-cache \
         build-base \
@@ -26,16 +22,8 @@ RUN apk add --no-cache \
         gawk \
         flex \
         bison \
-        geos-dev \
-        proj-dev \
-        gdal-dev \
-        protobuf-c-dev \
-        json-c-dev \
-        libxml2-dev \
-        sqlite-dev \
         curl \
         curl-dev \
-        tiff-dev \
         perl \
     && sed -i 's/with_llvm[[:space:]]*=[[:space:]]*yes/with_llvm = no/g' /usr/local/lib/postgresql/pgxs/src/Makefile.global \
     && ln -sf /usr/lib/libz.so /usr/local/lib/libz.so \
@@ -50,7 +38,7 @@ RUN cd /tmp \
     && make OPTFLAGS="" install \
     && echo "pgvector ${PGVECTOR_VERSION} built successfully"
 
-# 2. pg_repack (在线表膨胀清理 — 无锁重建表/索引)
+# 2. pg_repack (在线表膨胀清理)
 RUN cd /tmp \
     && git clone --depth 1 https://github.com/reorg/pg_repack.git \
     && cd pg_repack \
@@ -58,7 +46,7 @@ RUN cd /tmp \
     && make install \
     && echo "pg_repack built successfully"
 
-# 3. pg_cron (定时任务调度 — 自动 VACUUM/维护/归档)
+# 3. pg_cron (定时任务调度)
 RUN cd /tmp \
     && git clone --depth 1 https://github.com/citusdata/pg_cron.git \
     && cd pg_cron \
@@ -66,8 +54,7 @@ RUN cd /tmp \
     && make install \
     && echo "pg_cron built successfully"
 
-# 4. pg_hint_plan (执行计划干预 — 强制指定索引/连接顺序)
-#    pg_hint_plan 需要匹配 PG 主版本号的分支
+# 4. pg_hint_plan (执行计划干预)
 RUN PG_MAJOR=$(echo "${PG_VERSION}" | cut -d. -f1) \
     && cd /tmp \
     && git clone --branch PG${PG_MAJOR} --depth 1 https://github.com/ossc-db/pg_hint_plan.git \
@@ -75,25 +62,6 @@ RUN PG_MAJOR=$(echo "${PG_VERSION}" | cut -d. -f1) \
     && make -j$(nproc) \
     && make install \
     && echo "pg_hint_plan built successfully"
-
-# 5. PostGIS (空间数据处理 — ST_Distance/ST_Within/ST_Intersects 等)
-#    使用 release tarball (自带 configure 脚本, 跳过 autogen.sh)
-#    PostGIS 3.6 支持 PostgreSQL 12-18, 一个版本覆盖所有 PG
-RUN cd /tmp \
-    && curl -fsSL "https://download.osgeo.org/postgis/source/postgis-${POSTGIS_VERSION}.tar.gz" -o postgis.tar.gz \
-    && tar xzf postgis.tar.gz \
-    && cd postgis-${POSTGIS_VERSION} \
-    && ./configure --with-pgconfig=$(which pg_config) --without-raster --without-sfcgal --without-topology \
-    && sed -i '/^SUBDIRS/s/\braster\b//' postgis/Makefile 2>/dev/null || true \
-    && make -C liblwgeom -j$(nproc) \
-    && make -C liblwgeom install \
-    && make -C postgis -j$(nproc) \
-    && make -C postgis install \
-    && make -C extensions -j$(nproc) \
-    && make -C extensions install \
-    && echo "PostGIS ${POSTGIS_VERSION} built successfully" \
-    && ls -la $(pg_config --pkglibdir)/postgis*.so \
-    && ls -la $(pg_config --sharedir)/extension/postgis*.control
 
 # 收集所有编译产物到统一目录
 RUN mkdir -p /tmp/extensions-build \
@@ -108,18 +76,10 @@ FROM postgres:${PG_VERSION}-alpine
 
 ARG PG_VERSION=18.4
 ARG PGVECTOR_VERSION=0.8.2
-ARG POSTGIS_VERSION=3.6.3
 
-# 安装 PostGIS 运行时依赖 (GEOS/PROJ/GDAL 等共享库)
-RUN apk add --no-cache \
-        geos \
-        proj \
-        gdal \
-        protobuf-c \
-        json-c \
-        libxml2 \
-        sqlite-libs \
-    && echo "PostGIS runtime dependencies installed"
+# PostGIS via apk (stable, no compile issues)
+RUN apk add --no-cache postgis \
+    && echo "PostGIS installed from Alpine repos"
 
 LABEL maintainer="PostgreSQL Patch Community"
 LABEL description="PostgreSQL ${PG_VERSION} + 常用扩展 (pgvector, pg_repack, pg_hint_plan, pg_cron, PostGIS, contrib)"
@@ -128,7 +88,7 @@ LABEL org.opencontainers.image.description="PostgreSQL ${PG_VERSION} with pre-co
 LABEL org.opencontainers.image.version="${PG_VERSION}-alpine-patch"
 LABEL pg.version="${PG_VERSION}"
 LABEL extensions.pgvector.version="${PGVECTOR_VERSION}"
-LABEL extensions.postgis.version="${POSTGIS_VERSION}"
+LABEL extensions.postgis="apk"
 
 # Copy all extensions from builder
 COPY --from=builder /tmp/extensions-build/*.so /usr/local/lib/postgresql/
