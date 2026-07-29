@@ -21,3 +21,19 @@
 - **SM4**：国密分组密码算法（加密/解密）
 - **TLCP**：国密传输层密码协议（双证书 TLS）
 - **NTLS**：Nginx 国密 TLS 扩展
+
+## 版本列表
+
+| OpenResty 版本 | 基础镜像 | Tongsuo 版本 | 镜像 Tag |
+|---|---|---|---|
+| 1.21.4.3 | ubuntu:focal | 8.4.0 | `1.21.4.3-3-3-focal-tongsuo` |
+| 1.27.1.2 | ubuntu:focal | 8.4.0 | `1.27.1.2-5-1-focal-tongsuo` |
+| 1.29.2.5 | ubuntu:noble | 8.5.0-pre1 | `1.29.2.5-0-noble-tongsuo` |
+| 1.31.1.1 | ubuntu:noble | 8.5.0-pre1 | `1.31.1.1-0-noble-tongsuo` |
+| 1.31.1.1 | ubuntu:noble | 8.5.0-pre1 | `1.31.1.1-2-1-noble-tongsuo` |
+
+## 镜像地址
+
+```bash
+docker pull ghcr.io/restart-game-lab/openresty-tongsuo:latest
+```

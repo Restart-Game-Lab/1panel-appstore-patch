@@ -38,3 +38,21 @@
 | **pg_visibility** | 可见性映射检查 |
 | **pg_freespacemap** | 空闲空间映射 |
 | **pageinspect** | 页面级检查 |
+
+## 版本列表
+
+| PostgreSQL 版本 | 基础镜像 | pgvector 版本 | PostGIS 版本 | 镜像 Tag |
+|---|---|---|---|---|
+| 12.22 | alpine:3.16 | 0.7.4 | 3.5.3 | `12.22-alpine-patch` |
+| 13.23 | alpine:3.16 | 0.8.2 | 3.5.3 | `13.23-alpine-patch` |
+| 14.23 | alpine:3.16 | 0.8.2 | 3.5.3 | `14.23-alpine-patch` |
+| 15.18 | alpine:3.16 | 0.8.2 | 3.5.3 | `15.18-alpine-patch` |
+| 16.14 | alpine:3.20 | 0.8.2 | 3.5.3 | `16.14-alpine-patch` |
+| 17.10 | alpine:3.20 | 0.8.2 | 3.5.3 | `17.10-alpine-patch` |
+| 18.4 | alpine:3.20 | 0.8.2 | 3.5.3 | `18.4-alpine-patch` |
+
+## 镜像地址
+
+```bash
+docker pull ghcr.io/restart-game-lab/postgresql-patch:18.4-alpine-patch
+```
