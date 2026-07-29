@@ -73,6 +73,7 @@ ARG RESTY_ADD_PACKAGE_BUILDDEPS=""
 ARG RESTY_ADD_PACKAGE_RUNDEPS=""
 ARG RESTY_EVAL_PRE_CONFIGURE=""
 ARG RESTY_EVAL_POST_DOWNLOAD_PRE_CONFIGURE=""
+ARG RESTY_EVAL_PRE_MAKE=""
 ARG RESTY_EVAL_POST_MAKE=""
 
 ARG _RESTY_CONFIG_DEPS="--with-pcre \
@@ -87,6 +88,7 @@ LABEL resty_luarocks_version="${RESTY_LUAROCKS_VERSION}"
 LABEL resty_openssl_version="${RESTY_OPENSSL_VERSION}"
 LABEL resty_openssl_url_base="${RESTY_OPENSSL_URL_BASE}"
 LABEL resty_openssl_build_options="${RESTY_OPENSSL_BUILD_OPTIONS}"
+LABEL resty_openssl_patch_version=""
 LABEL resty_pcre_version="${RESTY_PCRE_VERSION}"
 LABEL resty_pcre_build_options="${RESTY_PCRE_BUILD_OPTIONS}"
 LABEL resty_pcre_sha256="${RESTY_PCRE_SHA256}"
@@ -97,6 +99,7 @@ LABEL resty_add_package_builddeps="${RESTY_ADD_PACKAGE_BUILDDEPS}"
 LABEL resty_add_package_rundeps="${RESTY_ADD_PACKAGE_RUNDEPS}"
 LABEL resty_eval_pre_configure="${RESTY_EVAL_PRE_CONFIGURE}"
 LABEL resty_eval_post_download_pre_configure="${RESTY_EVAL_POST_DOWNLOAD_PRE_CONFIGURE}"
+LABEL resty_eval_pre_make="${RESTY_EVAL_PRE_MAKE}"
 LABEL resty_eval_post_make="${RESTY_EVAL_POST_MAKE}"
 LABEL resty_luajit_options="${RESTY_LUAJIT_OPTIONS}"
 LABEL resty_pcre_options="${RESTY_PCRE_OPTIONS}"
@@ -163,6 +166,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && cd /tmp/openresty-${RESTY_VERSION} \
     && if [ -n "${RESTY_EVAL_POST_DOWNLOAD_PRE_CONFIGURE}" ]; then eval $(echo ${RESTY_EVAL_POST_DOWNLOAD_PRE_CONFIGURE}); fi \
     && eval ./configure -j${RESTY_J} ${_RESTY_CONFIG_DEPS} ${RESTY_CONFIG_OPTIONS} ${RESTY_CONFIG_OPTIONS_MORE} ${RESTY_LUAJIT_OPTIONS} ${RESTY_PCRE_OPTIONS} --add-module=/usr/local/openresty/modules/ngx_brotli \
+    && if [ -n "${RESTY_EVAL_PRE_MAKE}" ]; then eval $(echo ${RESTY_EVAL_PRE_MAKE}); fi \
     && make -j${RESTY_J} \
     && make -j${RESTY_J} install \
     && cd /tmp \

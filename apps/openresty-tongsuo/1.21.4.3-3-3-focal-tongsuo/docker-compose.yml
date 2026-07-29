@@ -1,7 +1,14 @@
 services:
   openresty:
-    container_name: ${CONTAINER_NAME}
+    build:
+      context: ./build
+      args:
+        - PANEL_OPENRESTY_VERSION=1.21.4.3-3-3-focal-tongsuo
+        - RESTY_CONFIG_OPTIONS_MORE=${RESTY_CONFIG_OPTIONS_MORE}
+        - RESTY_ADD_PACKAGE_BUILDDEPS=${RESTY_ADD_PACKAGE_BUILDDEPS}
+        - CONTAINER_PACKAGE_URL=${CONTAINER_PACKAGE_URL}
     image: ghcr.io/restart-game-lab/1panel-appstore-patch/openresty-tongsuo:1.21.4.3-3-3-focal-tongsuo
+    container_name: ${CONTAINER_NAME}
     restart: always
     network_mode: host
     volumes:
@@ -14,6 +21,7 @@ services:
       - ./log:/var/log/nginx
       - ./root:/usr/share/nginx/html
       - /etc/localtime:/etc/localtime
+      - ./1pwaf/data:/usr/local/openresty/1pwaf/data
       - ${WEBSITE_DIR}:/www
       - ${WEBSITE_DIR}/conf.d:/usr/local/openresty/nginx/conf/conf.d/
       - ${WEBSITE_DIR}/stream.d:/usr/local/openresty/nginx/conf/stream.d/
